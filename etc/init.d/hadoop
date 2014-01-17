@@ -1,0 +1,81 @@
+#!/bin/bash
+#
+# /etc/init.d/hadoop -- startup script for Apache Hadoop
+#
+# Written by Dmytro Sukhariev <sukharevd@gmail.com>
+#
+### BEGIN INIT INFO
+# Provides:             hadoop
+# Required-Start:       $remote_fs $network
+# Required-Stop:        $remote_fs $network
+# Default-Start:        2 3 4 5
+# Default-Stop:         0 1 6
+# Short-Description:    Apache Hadoop 2.2
+# Description:          Provide Apache Hadoop startup/shutdown script
+### END INIT INFO
+
+. /etc/default/hadoop
+
+case "$1" in
+    format)
+        # Format a new distributed filesystem as hdfs:
+        sudo -u $HDFS_USER $HADOOP_HOME/bin/hdfs namenode -format
+        ;;
+      
+    start)
+        # Start the HDFS with the following command, run on the designated NameNode as hdfs:
+        echo 'Starting NameNode.'
+        sudo -u $HDFS_USER $HADOOP_HOME/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs start namenode
+        
+        # Run a script to start DataNodes on all slaves as root with a special environment variable HADOOP_SECURE_DN_USER set to hdfs:
+        echo 'Starting DataNode.'
+        sudo HADOOP_SECURE_DN_USER=$HDFS_USER $HADOOP_HOME/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs start datanode
+        
+        # Start the YARN with the following command, run on the designated ResourceManager as yarn:
+        echo 'Starting ResourceManager.'
+        sudo -u $YARN_USER $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR start resourcemanager
+        
+        # Run a script to start NodeManagers on all slaves as yarn:
+        echo 'Starting NodeManager.'
+        sudo -u $YARN_USER $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR start nodemanager
+        
+        # Start a standalone WebAppProxy server. Run on the WebAppProxy server as yarn. If multiple servers are used with load balancing it should be run on each of them:
+        echo 'Starting proxyserver.'
+        sudo -u $YARN_USER $HADOOP_YARN_HOME/bin/yarn start proxyserver --config $HADOOP_CONF_DIR
+        
+        # Start the MapReduce JobHistory Server with the following command, run on the designated server as mapred:
+        echo 'Starting historyserver.'
+        sudo -u $MAPRED_USER $HADOOP_HOME/sbin/mr-jobhistory-daemon.sh start historyserver --config $HADOOP_CONF_DIR
+        ;;
+
+    stop)
+
+        #Stop the NameNode with the following command, run on the designated NameNode as hdfs:
+        echo 'Stoping NameNode.'
+        sudo -u $HDFS_USER $HADOOP_HOME/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs stop namenode
+        
+        #Run a script to stop DataNodes on all slaves as root:
+        echo 'Stoping DataNode.'
+        sudo $HADOOP_HOME/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs stop datanode
+        
+        #Stop the ResourceManager with the following command, run on the designated ResourceManager as yarn:
+        echo 'Stoping ResourceManager.'
+        sudo -u $YARN_USER $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR stop resourcemanager
+        
+        #Run a script to stop NodeManagers on all slaves as yarn:
+        echo 'Stoping NodeManager.'
+        sudo -u $YARN_USER $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR stop nodemanager
+        
+        #Stop the WebAppProxy server. Run on the WebAppProxy server as yarn. If multiple servers are used with load balancing it should be run on each of them:
+        echo 'Stoping proxyserver.'
+        sudo -u $YARN_USER $HADOOP_YARN_HOME/bin/yarn stop proxyserver --config $HADOOP_CONF_DIR
+        
+        #Stop the MapReduce JobHistory Server with the following command, run on the designated server as mapred:
+        echo 'Stoping historyserver.'
+        sudo -u $MAPRED_USER $HADOOP_HOME/sbin/mr-jobhistory-daemon.sh stop historyserver --config $HADOOP_CONF_DIR
+        ;;
+
+    *)
+        echoo "Usage: service hadoop (start|stop|format)."
+        ;;
+esac

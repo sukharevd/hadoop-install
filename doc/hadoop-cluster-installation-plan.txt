@@ -1,0 +1,61 @@
+Master node:
+  - OpenVPN server (configured with 1 client config and key set for all hosts). Network: 10.12.0.0/16
+  - DNS server
+  - Has 5 interfaces: lo, eth0 (NAT), eth1 (host-only, forwarded vpn port), eth2 (internal network), tun0 (openvpn)
+  - Hostname: joda
+  - slaves file: hosted
+  - Provides service to remove/adding new slaves by IP that returns unique hostname (max hostname in slaves + 1):
+    - check IP address;
+    - determines available host-number hostname from slaves file;
+    - add hostname to slaves file;
+    - add IP hostname to DNS database and restart it;
+    - returns hostname;
+
+Slave nodes:
+  - OpenVPN client.
+  - Has 5 interfaces: lo, eth0 (NAT), eth1 (host only), eth2 (internal network), tun0 (openvpn)
+  - Hostname: ?
+  - slaves file: copied with rsync from master node
+
+
+========================================================================
+=============  USECASE: SET UP HADOOP CLUSTER  =========================
+========================================================================
+
+PrimaryDNS       SecondaryDNS        OpenVPN       NameNode       SecondaryNameNode     ResourceManager       Slaves
+install-dns master
+                 install-dns slave
+                                     install-vpn
+create-vpn-client(ns1,10.8.0.253)
+                 create-vpn-client(ns2,10.8.0.254)
+                                                   add-node namenode
+                                                   install-hadoop
+                                                                  add-node secondary
+                                                                  install-hadoop
+                                                                                        add-node rman
+                                                                                        install-hadoop
+                                                                                                              add-node slave
+                                                                                                              install-hadoop
+
+========================================================================
+=============  USECASE: ADD NEW NODE TO CLUSTER  =======================
+========================================================================
+
+New node                      PrimaryDNS          OpenVPN         NameNode
+  ------ add-dns-record() -------->
+  <---- (hostname, vpn_ip) --------
+
+  ------ add-vpn-client(hostname, vpn_ip) ---------->
+  <---- (key, cert, ca, conf) -----------------------
+
+  ---
+     | install-hadoop(hostname)
+  <---
+
+  ------ add-hadoop-slave(hostname) ----------------------------------->
+  <----- OK ------------------------------------------------------------
+
+Notes:
+1) New node should have access to primaryDNS;
+2) PrimaryDNS is responsible for emitting hostname and IPs;
+3) add-node should take one parameter (host type) 
