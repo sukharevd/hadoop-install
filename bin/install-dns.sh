@@ -12,7 +12,15 @@ function reverse_ip_against_prefix {
     eval "$3=`for i in $(seq $num -1 1); do echo "$direct_ip_sufix" | awk -F . '{printf $'$i'}'; if [ $i -ne 1 ]; then printf '.'; fi; done`"
 }
 
-apt-get update && apt-get -y install bind9 dnsutils
+if [ -z "`dpkg-query -l bind9 2> /dev/null`" ]; then
+    apt-get -y install bind9
+fi
+if [ -z "`dpkg-query -l dnsutils 2> /dev/null`" ]; then
+    apt-get -y install dnsutils
+fi
+if [ -z "`dpkg-query -l openvpn 2> /dev/null`" ]; then
+    apt-get -y install openvpn
+fi
 
 case "$1" in
   master)
@@ -83,24 +91,25 @@ ${DNS_REVERSE_ZONE}. IN SOA ns1.${DNS_ZONE}. admin.${DNS_ZONE}. (
      3600         ; Minimum
 )
 
-     IN    NS     ns1.${DNS_ZONE}.
-     IN    NS     ns2.${DNS_ZONE}.
+     IN    NS     ${PRIMARY_DNS_FQDN}.
+     IN    NS     ${SECONDARY_DNS_FQDN}.
 
-${HADOOP_NAMENODE_IP}  IN    PTR    ${HADOOP_NAMENODE}.${DNS_ZONE}.
-${HADOOP_SECONDARY_NAMENODE_IP}  IN    PTR    ${HADOOP_SECONDARY_NAMENODE}.${DNS_ZONE}.
-${HADOOP_RESOURCEMANAGER_IP}  IN    PTR    ${HADOOP_SECONDARY_NAMENODE}.${DNS_ZONE}.
-
+1.0  IN    PTR    ${PRIMARY_OPENVPN}.
 EOF
 sed -i -e 's,${DNS_REVERSE_ZONE},'$DNS_REVERSE_ZONE',g' /etc/bind/$DNS_REVERSE_ZONE
+sed -i -e 's,${PRIMARY_OPENVPN},'$PRIMARY_OPENVPN',g' /etc/bind/$DNS_REVERSE_ZONE
+sed -i -e 's,${PRIMARY_DNS_FQDN},'$PRIMARY_DNS_FQDN',g' /etc/bind/$DNS_REVERSE_ZONE
+sed -i -e 's,${SECONDARY_DNS_FQDN},'$SECONDARY_DNS_FQDN',g' /etc/bind/$DNS_REVERSE_ZONE
 sed -i -e 's,${DNS_ZONE},'$DNS_ZONE',g' /etc/bind/$DNS_REVERSE_ZONE
-sed -i -e 's,${HADOOP_NAMENODE},'$HADOOP_NAMENODE',g' /etc/bind/$DNS_REVERSE_ZONE
-sed -i -e 's,${HADOOP_SECONDARY_NAMENODE},'$HADOOP_SECONDARY_NAMENODE',g' /etc/bind/$DNS_REVERSE_ZONE
-reverse_ip_against_prefix $HADOOP_NAMENODE_IP $DNS_NEW_CLIENT_IP_PREFIX rev_namenode_ip
-reverse_ip_against_prefix $HADOOP_SECONDARY_NAMENODE_IP $DNS_NEW_CLIENT_IP_PREFIX rev_secondary_ip
-reverse_ip_against_prefix $HADOOP_RESOURCEMANAGER_IP $DNS_NEW_CLIENT_IP_PREFIX rev_rman_ip
-sed -i -e 's,${HADOOP_NAMENODE_IP},'$rev_namenode_ip',g' /etc/bind/$DNS_REVERSE_ZONE
-sed -i -e 's,${HADOOP_SECONDARY_NAMENODE_IP},'$rev_secondary_ip',g' /etc/bind/$DNS_REVERSE_ZONE
-sed -i -e 's,${HADOOP_RESOURCEMANAGER_IP},'$rev_rman_ip',g' /etc/bind/$DNS_REVERSE_ZONE
+#sed -i -e 's,${HADOOP_NAMENODE},'$HADOOP_NAMENODE',g' /etc/bind/$DNS_REVERSE_ZONE
+#sed -i -e 's,${HADOOP_SECONDARY_NAMENODE},'$HADOOP_SECONDARY_NAMENODE',g' /etc/bind/$DNS_REVERSE_ZONE
+#reverse_ip_against_prefix $PRIMARY_OPENVPN_IP $DNS_NEW_CLIENT_IP_PREFIX rev_openvpn_ip
+#reverse_ip_against_prefix $HADOOP_SECONDARY_NAMENODE_IP $DNS_NEW_CLIENT_IP_PREFIX rev_secondary_ip
+#reverse_ip_against_prefix $HADOOP_RESOURCEMANAGER_IP $DNS_NEW_CLIENT_IP_PREFIX rev_rman_ip
+#sed -i -e 's,${HADOOP_NAMENODE_IP},'$rev_namenode_ip',g' /etc/bind/$DNS_REVERSE_ZONE
+#sed -i -e 's,${HADOOP_SECONDARY_NAMENODE_IP},'$rev_secondary_ip',g' /etc/bind/$DNS_REVERSE_ZONE
+#sed -i -e 's,${HADOOP_RESOURCEMANAGER_IP},'$rev_rman_ip',g' /etc/bind/$DNS_REVERSE_ZONE
+#sed -i -e 's,${PRIMARY_OPENVPN_IP},'$rev_openvpn_ip',g' /etc/bind/$DNS_REVERSE_ZONE
 
 cat > /etc/bind/${DNS_ZONE} << "EOF"
 $TTL 3600
@@ -113,8 +122,8 @@ ${DNS_ZONE}. IN SOA ns1.${DNS_ZONE} admin.${DNS_ZONE}. (
 )
 
 ; DNS servers
-            IN NS ns1.${DNS_ZONE}.
-            IN NS ns2.${DNS_ZONE}.
+            IN NS ${PRIMARY_DNS_FQDN}.
+            IN NS ${SECONDARY_DNS_FQDN}.
 
 ; MX records
             IN MX 10 smtp.${DNS_ZONE}.
@@ -122,19 +131,13 @@ ${DNS_ZONE}. IN SOA ns1.${DNS_ZONE} admin.${DNS_ZONE}. (
             IN A ${DNS_NS1}
 
 ; Machine Names
-ns1         IN A ${DNS_NS1}
-ns2         IN A ${DNS_NS2}
-
-smtp        IN A ${SMTP_IP}
 ${PRIMARY_OPENVPN}     IN A ${PRIMARY_OPENVPN_IP}
-
-${HADOOP_NAMENODE}             IN A ${HADOOP_NAMENODE_IP}
-${HADOOP_SECONDARY_NAMENODE}   IN A ${HADOOP_SECONDARY_NAMENODE_IP}
-${HADOOP_RESOURCEMANAGER}      IN A ${HADOOP_RESOURCEMANAGER_IP}
 EOF
 sed -i -e 's,${DNS_ZONE},'$DNS_ZONE',g' /etc/bind/${DNS_ZONE}
 sed -i -e 's,${DNS_NS1},'$DNS_NS1',g' /etc/bind/${DNS_ZONE}
 sed -i -e 's,${DNS_NS2},'$DNS_NS2',g' /etc/bind/${DNS_ZONE}
+sed -i -e 's,${PRIMARY_DNS_FQDN},'$PRIMARY_DNS_FQDN',g' /etc/bind/${DNS_ZONE}
+sed -i -e 's,${SECONDARY_DNS_FQDN},'$SECONDARY_DNS_FQDN',g' /etc/bind/${DNS_ZONE}
 sed -i -e 's,${HADOOP_NAMENODE},'$HADOOP_NAMENODE',g' /etc/bind/${DNS_ZONE}
 sed -i -e 's,${HADOOP_NAMENODE_IP},'$HADOOP_NAMENODE_IP',g' /etc/bind/${DNS_ZONE}
 sed -i -e 's,${HADOOP_SECONDARY_NAMENODE},'$HADOOP_SECONDARY_NAMENODE',g' /etc/bind/${DNS_ZONE}
@@ -144,6 +147,34 @@ sed -i -e 's,${HADOOP_RESOURCEMANAGER_IP},'$HADOOP_RESOURCEMANAGER_IP',g' /etc/b
 sed -i -e 's,${PRIMARY_OPENVPN_IP},'$PRIMARY_OPENVPN_IP',g' /etc/bind/${DNS_ZONE}
 sed -i -e 's,${PRIMARY_OPENVPN},'`echo $PRIMARY_OPENVPN | awk -F ".${DNS_ZONE}" '{print $1}'`',g' /etc/bind/${DNS_ZONE}
 sed -i -e 's,${SMTP_IP},'$SMTP_IP',g' /etc/bind/${DNS_ZONE}
+
+bash $SCRIPT_DIR/install-cherrypy-service.sh $SCRIPT_DIR/cherrypy-dns.py
+bash $SCRIPT_DIR/install-nginx.sh $PRIMARY_DNS_FQDN $PRIMARY_DNS_PORT `$SCRIPT_DIR/cherrypy-dns.py port`
+
+my_dns_record=`wget --no-check-certificate --private-key $SCRIPT_DIR/../openssl/client/client.key --certificate $SCRIPT_DIR/../openssl/client/client.crt "https://$PRIMARY_DNS:$PRIMARY_DNS_PORT/domain-names/add?hostname=ns1" -O - | tail -n1`
+if [ $? -ne 0 ]; then
+    echo 'Error'
+    exit 1
+fi
+hostname=`echo "$my_dns_record" | awk '{print $1}'`
+ip=`echo "$my_dns_record" | awk '{print $2}'`
+echo "Obtained hostname: $hostname"
+echo "Obtained IP: $ip"
+
+sed -e -i '/s/^.*127\.0\.1\.1.*$/127.0.1.1    '$hostname'.'$DNS_ZONE' '$hostname'/g' /etc/hosts
+echo "$hostname" > /etc/hostname
+invoke-rc.d hostname.sh start
+
+wget --no-check-certificate --private-key $SCRIPT_DIR/../openssl/client/client.key --certificate $SCRIPT_DIR/../openssl/client/client.crt "https://$PRIMARY_OPENVPN_IP:$PRIMARY_OPENVPN_PORT/vpn-clients/add?hostname=$hostname&ip=$ip" -O $hostname.tar.gz
+if [ $? -ne 0 ]; then
+    echo 'Error'
+    exit 1
+fi
+tar -xzf $hostname.tar.gz
+mv ca.crt $hostname.{key,crt,conf} /etc/openvpn
+service openvpn restart
+
+
 ;;
 
   slave)

@@ -135,8 +135,12 @@ fi
 update_serial /etc/bind/$DNS_ZONE
 update_serial /etc/bind/$DNS_REVERSE_ZONE
 
+service bind9 reload
+status=$?
+
 echo "$hostname    IN A $ip" >> /etc/bind/$DNS_ZONE
-echo "$rev  IN    PTR    $hostname.$DNS_ZONE" >> /etc/bind/$DNS_REVERSE_ZONE
+echo "$rev  IN    PTR    $hostname.$DNS_ZONE." >> /etc/bind/$DNS_REVERSE_ZONE
 
 echo "Added host:"
 echo "$hostname $ip"
+exit $status

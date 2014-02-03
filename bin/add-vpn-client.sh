@@ -14,7 +14,6 @@ VPN_IP=$2
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 . $SCRIPT_DIR/hadoop-install.conf
 
-
 function check_ipv4 {
     if [ -z $1 ]; then
       echo "This should never happen"
@@ -32,6 +31,12 @@ function check_ipv4 {
     done
     echo "Verified IP address: $1"
 }
+
+if [ -e /etc/openvpn/easy-rsa/2.0/keys/$CLIENT_NAME.key ] ||
+   [ -e /etc/openvpn/easy-rsa/2.0/keys/$CLIENT_NAME.crt ]; then
+    echo "Client with this name already exists."
+    exit 400
+fi
 
 check_ipv4 $VPN_IP
 
@@ -187,5 +192,11 @@ sed -i -e 's,${PRIMARY_OPENVPN_IP},'$PRIMARY_OPENVPN_IP',g' /etc/openvpn/easy-rs
 
 echo "ifconfig-push $VPN_IP $OPENVPN_NETWORK_MASK" > /etc/openvpn/ccd/$CLIENT_NAME
 
-tar -cf - -C /etc/openvpn/easy-rsa/2.0/keys $CLIENT_NAME.{crt,key,conf} ca.crt > /etc/openvpn/easy-rsa/2.0/keys/$CLIENT_NAME.tar
+tar -czf - -C /etc/openvpn/easy-rsa/2.0/keys $CLIENT_NAME.{crt,key,conf} ca.crt > /etc/openvpn/easy-rsa/2.0/keys/$CLIENT_NAME.tar.gz
 chmod 600 -R /etc/openvpn/easy-rsa/2.0/keys
+
+echo "Keypair and config file were generated."
+echo "/etc/openvpn/easy-rsa/2.0/keys/$CLIENT_NAME.tar.gz"
+
+[ -e /etc/openvpn/easy-rsa/2.0/keys/$CLIENT_NAME.tar.gz ] && exit 0
+exit 500

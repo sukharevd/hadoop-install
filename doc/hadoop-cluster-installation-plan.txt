@@ -59,3 +59,12 @@ Notes:
 1) New node should have access to primaryDNS;
 2) PrimaryDNS is responsible for emitting hostname and IPs;
 3) add-node should take one parameter (host type) 
+
+
+Set of files    | installation scripts  |        Keys      |  Hadoop  |  CherryPy  |  
+                |                       |  client  |  ssh  |          |            |
+DNS Primary     |           +           |          |       |          |    repo    |  hadoop-install.min.tar.gz
+DNS Secondary   |           +           |          |       |          |            |  hadoop-install.min.tar.gz
+OpenVPN clients |           +           |          |       |          |    repo    |  hadoop-install.min.tar.gz
+Hadoop master   |           +           |     +    |   +   |    +     |    repo    |  hadoop-install-secret.full.tar.gz
+Hadoop slaves   |           +           |     +    |   +   |    +     |            |  hadoop-install-secret.full.tar.gz

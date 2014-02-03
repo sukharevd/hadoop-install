@@ -76,6 +76,6 @@ case "$1" in
         ;;
 
     *)
-        echoo "Usage: service hadoop (start|stop|format)."
+        echo "Usage: service hadoop (start|stop|format)."
         ;;
 esac

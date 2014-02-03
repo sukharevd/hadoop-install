@@ -5,6 +5,11 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 . $SCRIPT_DIR/hadoop-install.conf
 
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root."
+   exit 1
+fi
+
 if [ -z $JAVA_HOME ]; then
     echo "JAVA_HOME wasn't found, installing OpenJDK7..."
     apt-get install -y openssh-server openjdk-7-jdk
@@ -24,6 +29,10 @@ cd $INSTALL_DIR
 echo "Cleaning up..."
 [ -e $HADOOP_FULL_DIR ] && rm -r "$HADOOP_FULL_DIR"
 [ -e $HADOOP_DIR      ] && rm -r "$HADOOP_DIR"
+
+if [ -e "$SCRIPT_DIR/../dist/$HADOOP_FILENAME" ]; then
+    cp $SCRIPT_DIR/../dist/$HADOOP_FILENAME $INSTALL_DIR/$HADOOP_FILENAME
+fi
 
 if [ ! -e "$HADOOP_FILENAME" ]; then
     echo "Downloading: $HADOOP_ADDRESS..."
@@ -79,6 +88,7 @@ sed -e 's,${JAVA_HOME},'$JAVA_HOME',g; s,${HADOOP_LOG_DIR},'$HADOOP_LOG_DIR',g; 
 sed -e 's,${JAVA_HOME},'$JAVA_HOME',g; s,${HADOOP_HOME},'$HADOOP_HOME',g; s,${HADOOP_CONF_DIR},'$HADOOP_CONF_DIR',g' ../etc/profile.d/hadoop.sh > /etc/profile.d/hadoop.sh
 sed -i -e 's,${MAPRED_USER},'$MAPRED_USER',g; s,${YARN_USER},'$YARN_USER',g; s,${HDFS_USER},'$HDFS_USER',g' /etc/profile.d/hadoop.sh
 sed -e 's,export ,,g' /etc/profile.d/hadoop.sh > /etc/default/hadoop
+echo '' > $HADOOP_CONF_DIR/slaves
 
 echo "Registering as service..."
 cp ../etc/init.d/hadoop /etc/init.d/hadoop

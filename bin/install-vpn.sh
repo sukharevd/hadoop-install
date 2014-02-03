@@ -1,25 +1,30 @@
 #!/bin/bash
 
 # TODO: add check if port is taken
-# TODO: what if I want to install OpenVPN but not Bind? I still have DNS servers in config. A: maybe use 8.8.8.8... not exactly what is decired
+# TODO: what if I want to install OpenVPN but not Bind? I still have DNS servers in config. A: [ check ] && remove lines from config
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 . $SCRIPT_DIR/hadoop-install.conf
+
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root."
+   exit 1
+fi
 
 apt-get update && apt-get -y install openvpn openssl openssh-server # check if packages are present, if they are, don't execute this
 
 cp -R /usr/share/doc/openvpn/examples/easy-rsa/ /etc/openvpn
 
-sed -i -e 's,export KEY_COUNTRY=.*,export KEY_COUNTRY="US",g' /etc/openvpn/easy-rsa/2.0/vars
-sed -i -e 's,export KEY_PROVINCE=.*,export KEY_PROVINCE="WA",g' /etc/openvpn/easy-rsa/2.0/vars
-sed -i -e 's,export KEY_CITY=.*,export KEY_CITY="Seattle",g' /etc/openvpn/easy-rsa/2.0/vars
-sed -i -e 's,export KEY_ORG=.*,export KEY_ORG="Hadoop DSPS",g' /etc/openvpn/easy-rsa/2.0/vars
-sed -i -e 's,export KEY_EMAIL=.*,export KEY_EMAIL="admin@hdsps.in",g' /etc/openvpn/easy-rsa/2.0/vars
+sed -i -e 's,export KEY_COUNTRY=.*,export KEY_COUNTRY="'$OPENSSL_KEY_COUNTRY'",g' /etc/openvpn/easy-rsa/2.0/vars
+sed -i -e 's,export KEY_PROVINCE=.*,export KEY_PROVINCE="'$OPENSSL_KEY_PROVINCE'",g' /etc/openvpn/easy-rsa/2.0/vars
+sed -i -e 's,export KEY_CITY=.*,export KEY_CITY="'$OPENSSL_KEY_CITY'",g' /etc/openvpn/easy-rsa/2.0/vars
+sed -i -e 's,export KEY_ORG=.*,export KEY_ORG="'$OPENSSL_KEY_ORG'",g' /etc/openvpn/easy-rsa/2.0/vars
+sed -i -e 's,export KEY_EMAIL=.*,export KEY_EMAIL="'$OPENSSL_KEY_EMAIL'",g' /etc/openvpn/easy-rsa/2.0/vars
 sed -i -e 's,export KEY_SIZE=.*,export KEY_SIZE=2048,g' /etc/openvpn/easy-rsa/2.0/vars
-sed -i -e 's,export CA_EXPIRE=.*,export CA_EXPIRE=3650,g' /etc/openvpn/easy-rsa/2.0/vars
-sed -i -e 's,export KEY_EXPIRE=.*,export KEY_EXPIRE=3650,g' /etc/openvpn/easy-rsa/2.0/vars
-sed -i -e 's,export KEY_NAME=.*,export KEY_NAME="hdsps.in",g' /etc/openvpn/easy-rsa/2.0/vars
-sed -i -e 's,export KEY_CN=.*,export KEY_CN="hdsps.in",g' /etc/openvpn/easy-rsa/2.0/vars
+sed -i -e 's,export CA_EXPIRE=.*,export CA_EXPIRE='$OPENSSL_CA_EXPIRE',g' /etc/openvpn/easy-rsa/2.0/vars
+sed -i -e 's,export KEY_EXPIRE=.*,export KEY_EXPIRE='$OPENSSL_KEY_EXPIRE',g' /etc/openvpn/easy-rsa/2.0/vars
+sed -i -e 's,export KEY_NAME=.*,export KEY_NAME="'$OPENSSL_KEY_NAME'",g' /etc/openvpn/easy-rsa/2.0/vars
+sed -i -e 's,export KEY_CN=.*,export KEY_CN="'$OPENSSL_KEY_CN'",g' /etc/openvpn/easy-rsa/2.0/vars
 
 cd /etc/openvpn/easy-rsa/2.0/
 echo "Initializing variables..."
@@ -354,3 +359,6 @@ touch /var/log/openvpn.log
 mkdir /etc/openvpn/ccd
 
 service openvpn restart
+
+bash $SCRIPT_DIR/install-cherrypy-service.sh $SCRIPT_DIR/cherrypy-vpn.py
+bash $SCRIPT_DIR/install-nginx.sh $PRIMARY_OPENVPN $PRIMARY_OPENVPN_PORT `$SCRIPT_DIR/cherrypy-vpn.py port`
