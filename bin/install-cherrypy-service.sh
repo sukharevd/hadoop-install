@@ -18,7 +18,7 @@ if [ -z "`dpkg-query -l python-cherrypy3 2> /dev/null | grep '^ii '`" ]; then
 fi
 
 if [ -z "`dpkg-query -l gawk 2> /dev/null`" ]; then
-    apt-get install gawk
+    apt-get install -y gawk
 fi
 
 CHERRYPY_SCRIPT=`readlink -f $1`

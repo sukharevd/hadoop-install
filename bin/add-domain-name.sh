@@ -3,8 +3,8 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 . $SCRIPT_DIR/hadoop-install.conf
 
-if [ -z "`dpkg-query -l gawk 2> /dev/null`" ]; then
-    apt-get install gawk
+if [ -z "`dpkg-query -l gawk 2> /dev/null | grep '^ii '`" ]; then
+    apt-get -y install gawk
 fi
 
 # parses each partial IP from $existing as 4 byte integer and finds the greatest one
@@ -135,12 +135,14 @@ fi
 update_serial /etc/bind/$DNS_ZONE
 update_serial /etc/bind/$DNS_REVERSE_ZONE
 
+echo "$hostname    IN A $ip" >> /etc/bind/$DNS_ZONE
+echo >> /etc/bind/$DNS_ZONE
+echo "$rev  IN    PTR    $hostname.$DNS_ZONE." >> /etc/bind/$DNS_REVERSE_ZONE
+
 service bind9 reload
 status=$?
 
-echo "$hostname    IN A $ip" >> /etc/bind/$DNS_ZONE
-echo "$rev  IN    PTR    $hostname.$DNS_ZONE." >> /etc/bind/$DNS_REVERSE_ZONE
-
 echo "Added host:"
 echo "$hostname $ip"
+
 exit $status

@@ -30,10 +30,8 @@
         <name>yarn.resourcemanager.scheduler.address</name>
         <value>${HADOOP_RESOURCEMANAGER_FQDN}:8030</value>
     </property>
-<!-- TODO remove me. This block caused situation when ResourceManager tried to listen the same port as NodeManager, so only one of them started.
     <property>
         <name>yarn.resourcemanager.address</name>
-        <value>${HADOOP_RESOURCEMANAGER_FQDN}:8040</value>
+        <value>${HADOOP_RESOURCEMANAGER_FQDN}:8032</value>
     </property>
--->
 </configuration>

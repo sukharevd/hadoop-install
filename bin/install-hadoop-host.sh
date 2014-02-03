@@ -47,7 +47,7 @@ echo "Obtained hostname: $hostname"
 echo "Obtained IP: $ip"
 
 #if [ -z `grep ".*127.0.1.1.*$DNS_ZONE" /etc/hosts` ]; then
-    sed -i -e 's/^.*127.0.1.1.*$/127.0.1.1    '$hostname'.'$DNS_ZONE' '$hostname'/g' /etc/hosts
+    sed -i -e 's/^.*127.0.1.1.*$/127.0.1.1    '$hostname'/g' /etc/hosts
     echo "$hostname" > /etc/hostname
     invoke-rc.d hostname.sh start
 #fi
@@ -68,13 +68,30 @@ bash $SCRIPT_DIR/share-ssh-keys.sh $HDFS_USER  $hostname.$DNS_ZONE
 bash $SCRIPT_DIR/share-ssh-keys.sh $MAPRED_USER $hostname.$DNS_ZONE
 bash $SCRIPT_DIR/share-ssh-keys.sh $HADOOP_USER $hostname.$DNS_ZONE
 
-if [[ $1 == 'namenode' ]]; then
-    service hadoop format
+echo "Registering as service..."
+if [[ $1 == "$HADOOP_NAMENODE" ]]; then
+    SERVICE_NAME="hadoop-nn"
+else
+    if [[ $1 == "$HADOOP_RESOURCEMANAGER" ]]; then
+        SERVICE_NAME="hadoop-rm"
+    else
+        SERVICE_NAME="hadoop-slave"
+    fi
+fi
+cp $SCRIPT_DIR/../etc/init.d/$SERVICE_NAME /etc/init.d/$SERVICE_NAME
+chmod 755 /etc/init.d/$SERVICE_NAME
+update-rc.d $SERVICE_NAME defaults
+
+if [[ $1 == "$HADOOP_NAMENODE" ]]; then
+    service $SERVICE_NAME format
     bash $SCRIPT_DIR/install-cherrypy-service.sh $SCRIPT_DIR/cherrypy-namenode.py
     bash $SCRIPT_DIR/install-nginx.sh $HADOOP_NAMENODE_FQDN $HADOOP_NAMENODE_PORT `$SCRIPT_DIR/cherrypy-namenode.py port`
 else
-    [[ $1 != "HADOOP_SECONDARY_NAMENODE" ]] && [[ $1 != "$HADOOP_RESOURCEMANAGER" ]] &&
+    [[ $1 != "$HADOOP_SECONDARY_NAMENODE" ]] && [[ $1 != "$HADOOP_RESOURCEMANAGER" ]] &&
     wget --no-check-certificate --private-key $SCRIPT_DIR/../openssl/client/client.key --certificate $SCRIPT_DIR/../openssl/client/client.crt "https://$HADOOP_NAMENODE_FQDN:$HADOOP_NAMENODE_PORT/hadoop_slaves/add?host=$hostname.$DNS_ZONE" -O -
     #echo "$hostname" > $HADOOP_CONF_DIR/slaves
 fi
-service hadoop start
+
+service $SERVICE_NAME start
+
+echo "Done."

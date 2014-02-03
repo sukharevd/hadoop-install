@@ -12,13 +12,13 @@ function reverse_ip_against_prefix {
     eval "$3=`for i in $(seq $num -1 1); do echo "$direct_ip_sufix" | awk -F . '{printf $'$i'}'; if [ $i -ne 1 ]; then printf '.'; fi; done`"
 }
 
-if [ -z "`dpkg-query -l bind9 2> /dev/null`" ]; then
+if [ -z "`dpkg-query -l bind9 2> /dev/null | grep '^ii '`" ]; then
     apt-get -y install bind9
 fi
-if [ -z "`dpkg-query -l dnsutils 2> /dev/null`" ]; then
+if [ -z "`dpkg-query -l dnsutils 2> /dev/null | grep '^ii '`" ]; then
     apt-get -y install dnsutils
 fi
-if [ -z "`dpkg-query -l openvpn 2> /dev/null`" ]; then
+if [ -z "`dpkg-query -l openvpn 2> /dev/null | grep '^ii '`" ]; then
     apt-get -y install openvpn
 fi
 
@@ -132,10 +132,9 @@ ${DNS_ZONE}. IN SOA ns1.${DNS_ZONE} admin.${DNS_ZONE}. (
 
 ; Machine Names
 ${PRIMARY_OPENVPN}     IN A ${PRIMARY_OPENVPN_IP}
+smtp        IN A ${SMTP_IP}
 EOF
 sed -i -e 's,${DNS_ZONE},'$DNS_ZONE',g' /etc/bind/${DNS_ZONE}
-sed -i -e 's,${DNS_NS1},'$DNS_NS1',g' /etc/bind/${DNS_ZONE}
-sed -i -e 's,${DNS_NS2},'$DNS_NS2',g' /etc/bind/${DNS_ZONE}
 sed -i -e 's,${PRIMARY_DNS_FQDN},'$PRIMARY_DNS_FQDN',g' /etc/bind/${DNS_ZONE}
 sed -i -e 's,${SECONDARY_DNS_FQDN},'$SECONDARY_DNS_FQDN',g' /etc/bind/${DNS_ZONE}
 sed -i -e 's,${HADOOP_NAMENODE},'$HADOOP_NAMENODE',g' /etc/bind/${DNS_ZONE}
@@ -161,9 +160,12 @@ ip=`echo "$my_dns_record" | awk '{print $2}'`
 echo "Obtained hostname: $hostname"
 echo "Obtained IP: $ip"
 
-sed -e -i '/s/^.*127\.0\.1\.1.*$/127.0.1.1    '$hostname'.'$DNS_ZONE' '$hostname'/g' /etc/hosts
+sed -i -e 's/^127\.0\.1\.1.*$/127.0.1.1    '$hostname'.'$DNS_ZONE' '$hostname'/g' /etc/hosts
 echo "$hostname" > /etc/hostname
 invoke-rc.d hostname.sh start
+
+sed -i -e 's,${DNS_NS1},'$ip',g' /etc/bind/${DNS_ZONE}
+#sed -i -e 's,${DNS_NS2},'$DNS_NS2',g' /etc/bind/${DNS_ZONE}
 
 wget --no-check-certificate --private-key $SCRIPT_DIR/../openssl/client/client.key --certificate $SCRIPT_DIR/../openssl/client/client.crt "https://$PRIMARY_OPENVPN_IP:$PRIMARY_OPENVPN_PORT/vpn-clients/add?hostname=$hostname&ip=$ip" -O $hostname.tar.gz
 if [ $? -ne 0 ]; then
@@ -233,6 +235,30 @@ options {
 EOF
 sed -i -e 's,${DNS_GATEWAY_IP},'$DNS_GATEWAY_IP',g' /etc/bind/named.conf.options
 sed -i -e 's,${PRIMARY_DNS},'$PRIMARY_DNS',g' /etc/bind/named.conf.options
+
+my_dns_record=`wget --no-check-certificate --private-key $SCRIPT_DIR/../openssl/client/client.key --certificate $SCRIPT_DIR/../openssl/client/client.crt "https://$PRIMARY_DNS:$PRIMARY_DNS_PORT/domain-names/add?hostname=ns2" -O - | tail -n1`
+if [ $? -ne 0 ]; then
+    echo 'Error'
+    exit 1
+fi
+hostname=`echo "$my_dns_record" | awk '{print $1}'`
+ip=`echo "$my_dns_record" | awk '{print $2}'`
+echo "Obtained hostname: $hostname"
+echo "Obtained IP: $ip"
+
+sed -i -e 's/^127\.0\.1\.1.*$/127.0.1.1    '$hostname'.'$DNS_ZONE' '$hostname'/g' /etc/hosts
+echo "$hostname" > /etc/hostname
+invoke-rc.d hostname.sh start
+
+wget --no-check-certificate --private-key $SCRIPT_DIR/../openssl/client/client.key --certificate $SCRIPT_DIR/../openssl/client/client.crt "https://$PRIMARY_OPENVPN_IP:$PRIMARY_OPENVPN_PORT/vpn-clients/add?hostname=$hostname&ip=$ip" -O $hostname.tar.gz
+if [ $? -ne 0 ]; then
+    echo 'Error'
+    exit 1
+fi
+tar -xzf $hostname.tar.gz
+mv ca.crt $hostname.{key,crt,conf} /etc/openvpn
+service openvpn restart
+
 ;;
 
   *)

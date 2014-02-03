@@ -78,11 +78,12 @@ chown -R $MAPRED_USER:$HADOOP_USER $HADOOP_HOME/logs
 chmod -R 775 $HADOOP_HOME/logs
 
 echo "Configuring..."
-# TODO only master should change configs, others should use rsync
+# TODO only master should change configs, others should use rsync???
 cd $SCRIPT_DIR
 sed -e 's/${HADOOP_NAMENODE_FQDN}/'$HADOOP_NAMENODE_FQDN'/g' ../etc/hadoop/core-site.xml > $HADOOP_CONF_DIR/core-site.xml
 sed -e 's,${REPLICATION_RATIO},'$REPLICATION_RATIO',g; s,${HDFS_NAMENODE_DIR},'$HDFS_NAMENODE_DIR',g; s,${HDFS_DATANODE_DIR},'$HDFS_DATANODE_DIR',g' ../etc/hadoop/hdfs-site.xml > $HADOOP_CONF_DIR/hdfs-site.xml
 cp ../etc/hadoop/mapred-site.xml $HADOOP_CONF_DIR/mapred-site.xml
+cp ../etc/hadoop/yarn-env.sh $HADOOP_CONF_DIR/yarn-env.sh # prefere ipv4
 sed -e 's,${HADOOP_RESOURCEMANAGER_FQDN},'$HADOOP_RESOURCEMANAGER_FQDN',g' ../etc/hadoop/yarn-site.xml > $HADOOP_CONF_DIR/yarn-site.xml
 sed -e 's,${JAVA_HOME},'$JAVA_HOME',g; s,${HADOOP_LOG_DIR},'$HADOOP_LOG_DIR',g; s,${YARN_LOG_DIR},'$YARN_LOG_DIR',g; ' ../etc/hadoop/hadoop-env.sh >  $HADOOP_CONF_DIR/hadoop-env.sh
 sed -e 's,${JAVA_HOME},'$JAVA_HOME',g; s,${HADOOP_HOME},'$HADOOP_HOME',g; s,${HADOOP_CONF_DIR},'$HADOOP_CONF_DIR',g' ../etc/profile.d/hadoop.sh > /etc/profile.d/hadoop.sh
@@ -90,11 +91,6 @@ sed -i -e 's,${MAPRED_USER},'$MAPRED_USER',g; s,${YARN_USER},'$YARN_USER',g; s,$
 sed -e 's,export ,,g' /etc/profile.d/hadoop.sh > /etc/default/hadoop
 echo '' > $HADOOP_CONF_DIR/slaves
 
-echo "Registering as service..."
-cp ../etc/init.d/hadoop /etc/init.d/hadoop
-chmod 755 /etc/init.d/hadoop
-
-echo "Done."
 
 # TODO: move it somewhere
 # sed -e -i '/s/^.*127.0.1.1.*$/127.0.1.1    '$hostname'.'$DNS_ZONE' '$hostname'/g' /etc/hosts

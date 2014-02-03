@@ -1,0 +1,45 @@
+#!/bin/bash
+#
+# /etc/init.d/hadoop-slave -- startup script for Apache Hadoop
+#
+# Written by Dmytro Sukhariev <sukharevd@gmail.com>
+#
+### BEGIN INIT INFO
+# Provides:             hadoop-slave
+# Required-Start:       $remote_fs $network
+# Required-Stop:        $remote_fs $network
+# Default-Start:        2 3 4 5
+# Default-Stop:         0 1 6
+# Short-Description:    Apache Hadoop 2.2
+# Description:          Provide Apache Hadoop Slave startup/shutdown script
+### END INIT INFO
+
+. /etc/default/hadoop
+
+case "$1" in
+      
+    start)
+        # Run a script to start DataNodes on all slaves as root with a special environment variable HADOOP_SECURE_DN_USER set to hdfs:
+        echo 'Starting DataNode.'
+        sudo HADOOP_SECURE_DN_USER=$HDFS_USER $HADOOP_HOME/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs start datanode
+        
+        # Run a script to start NodeManagers on all slaves as yarn:
+        echo 'Starting NodeManager.'
+        sudo -u $YARN_USER $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR start nodemanager
+        ;;
+
+    stop)
+
+        #Run a script to stop DataNodes on all slaves as root:
+        echo 'Stoping DataNode.'
+        sudo $HADOOP_HOME/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs stop datanode
+        
+        #Run a script to stop NodeManagers on all slaves as yarn:
+        echo 'Stoping NodeManager.'
+        sudo -u $YARN_USER $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR stop nodemanager        
+        ;;
+
+    *)
+        echo "Usage: service hadoop-slave (start|stop)."
+        ;;
+esac

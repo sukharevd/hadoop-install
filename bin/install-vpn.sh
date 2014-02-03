@@ -26,6 +26,9 @@ sed -i -e 's,export KEY_EXPIRE=.*,export KEY_EXPIRE='$OPENSSL_KEY_EXPIRE',g' /et
 sed -i -e 's,export KEY_NAME=.*,export KEY_NAME="'$OPENSSL_KEY_NAME'",g' /etc/openvpn/easy-rsa/2.0/vars
 sed -i -e 's,export KEY_CN=.*,export KEY_CN="'$OPENSSL_KEY_CN'",g' /etc/openvpn/easy-rsa/2.0/vars
 
+sed -i -e 's, --interact , ,g' /etc/openvpn/easy-rsa/2.0/build-ca
+sed -i -e 's, --interact , ,g' /etc/openvpn/easy-rsa/2.0/build-key-server
+
 cd /etc/openvpn/easy-rsa/2.0/
 echo "Initializing variables..."
 . /etc/openvpn/easy-rsa/2.0/vars

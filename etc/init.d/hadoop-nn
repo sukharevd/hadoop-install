@@ -1,0 +1,49 @@
+#!/bin/bash
+#
+# /etc/init.d/hadoop-nn -- startup script for Apache Hadoop
+#
+# Written by Dmytro Sukhariev <sukharevd@gmail.com>
+#
+### BEGIN INIT INFO
+# Provides:             hadoop-nn
+# Required-Start:       $remote_fs $network
+# Required-Stop:        $remote_fs $network
+# Default-Start:        2 3 4 5
+# Default-Stop:         0 1 6
+# Short-Description:    Apache Hadoop 2.2
+# Description:          Provide Apache Hadoop Namenode startup/shutdown script
+### END INIT INFO
+
+. /etc/default/hadoop
+
+case "$1" in
+    format)
+        # Format a new distributed filesystem as hdfs:
+        sudo -u $HDFS_USER $HADOOP_HOME/bin/hdfs namenode -format
+        ;;
+      
+    start)
+        # Start the HDFS with the following command, run on the designated NameNode as hdfs:
+        echo 'Starting NameNode.'
+        sudo -u $HDFS_USER $HADOOP_HOME/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs start namenode
+        
+        # Start the MapReduce JobHistory Server with the following command, run on the designated server as mapred:
+        #echo 'Starting historyserver.'
+        #sudo -u $MAPRED_USER $HADOOP_HOME/sbin/mr-jobhistory-daemon.sh start historyserver --config $HADOOP_CONF_DIR
+        ;;
+
+    stop)
+
+        #Stop the NameNode with the following command, run on the designated NameNode as hdfs:
+        echo 'Stoping NameNode.'
+        sudo -u $HDFS_USER $HADOOP_HOME/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs stop namenode
+        
+        #Stop the MapReduce JobHistory Server with the following command, run on the designated server as mapred:
+        #echo 'Stoping historyserver.'
+        #sudo -u $MAPRED_USER $HADOOP_HOME/sbin/mr-jobhistory-daemon.sh stop historyserver --config $HADOOP_CONF_DIR
+        ;;
+
+    *)
+        echo "Usage: service hadoop-namenode (start|stop|format)."
+        ;;
+esac

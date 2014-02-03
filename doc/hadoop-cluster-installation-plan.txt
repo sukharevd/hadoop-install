@@ -68,3 +68,33 @@ DNS Secondary   |           +           |          |       |          |         
 OpenVPN clients |           +           |          |       |          |    repo    |  hadoop-install.min.tar.gz
 Hadoop master   |           +           |     +    |   +   |    +     |    repo    |  hadoop-install-secret.full.tar.gz
 Hadoop slaves   |           +           |     +    |   +   |    +     |            |  hadoop-install-secret.full.tar.gz
+
+==USAGE==
+Warning: keep order of operations:
+
+Generate keys, download Hadoop, pack everything to archives:
+./pack.sh
+
+Copy archives to each new host:
+root@debian:~# scp dmitriy@192.168.56.1:~/Desktop/hadoop-install.full.tar.gz ~/ && tar -xzf hadoop-install.full.tar.gz
+
+Install Openvpn at some public host:
+root@debian:~# hadoop-install/install.sh openvpn
+
+Install primary DNS at some public host:
+root@debian:~# hadoop-install/install.sh dns-primary
+
+Install secondary DNS at some public host:
+root@debian:~# hadoop-install/install.sh dns-secondary
+
+Install Apache Hadoop at NameNode:
+root@debian:~# hadoop-install/install.sh namenode
+
+Install Apache Hadoop at ResourceManager:
+root@debian:~# hadoop-install/install.sh resource-manager
+
+Install Apache Hadoop at all slaves:
+root@debian:~# hadoop-install/install.sh slave
+
+Check if default example can be executed at new Hadoop cluster:
+hdfs@namenode:~$ $HADOOP_HOME/bin/hadoop jar $HADOOP_HOME/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.2.0.jar pi 2 5
